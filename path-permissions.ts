@@ -40,6 +40,14 @@ function globToRegExp(glob: string): RegExp {
   return new RegExp(out);
 }
 
+function expandTilde(s: string): string {
+  if (!s) return s;
+  if (s.startsWith("~")) {
+    return path.join(process.env.HOME || "", s.slice(1));
+  }
+  return s;
+}
+
 export default function (pi: ExtensionAPI) {
   pi.registerFlag("permissions-globs", {
     type: "string",
@@ -93,11 +101,31 @@ export default function (pi: ExtensionAPI) {
       // Try parsing as JSON first
       try {
         const json = JSON.parse(txt);
+        // Support a single "paths" array that can contain either base paths or glob-like entries.
         if (json.paths && Array.isArray(json.paths)) {
-          basesRaw.push(...json.paths.filter((p: any) => typeof p === "string"));
+          for (const entry of json.paths) {
+            if (typeof entry !== "string") continue;
+            const e0 = entry.trim();
+            if (!e0) continue;
+            const e = e0;
+            // Heuristics:
+            // - If entry contains glob tokens -> treat as glob
+            // - Else if it looks like a filesystem path (starts with ~, ., absolute, or contains a path separator) -> base path
+            // - Else -> treat as glob (basename patterns like README.md)
+            if (/[*?\[\]]/.test(e)) {
+              // expand ~ if present inside glob (so ~/projects/**/*.py works)
+              globs.push(expandTilde(e));
+            } else if (e.startsWith("~") || e.startsWith(".") || path.isAbsolute(e) || e.includes("/") || e.includes("\\")) {
+              basesRaw.push(e);
+            } else {
+              globs.push(e);
+            }
+          }
         }
         if (json.globs && Array.isArray(json.globs)) {
-          globs.push(...json.globs.filter((g: any) => typeof g === "string"));
+          for (const g of json.globs.filter((g: any) => typeof g === "string")) {
+            globs.push(expandTilde(g));
+          }
         }
       } catch {
         // Not JSON, parse as plain text
@@ -108,7 +136,7 @@ export default function (pi: ExtensionAPI) {
           const low = raw.toLowerCase();
           if (low.startsWith("glob:") || low.startsWith("g:")) {
             const v = raw.split(":").slice(1).join(":").trim();
-            if (v) globs.push(v);
+            if (v) globs.push(expandTilde(v));
             continue;
           }
           if (low.startsWith("path:") || low.startsWith("p:")) {
@@ -118,7 +146,7 @@ export default function (pi: ExtensionAPI) {
           }
           // Heuristics: if line contains glob tokens, treat as glob, else as path
           if (raw.includes("*") || raw.includes("?") || raw.includes("[") || raw.includes("]")) {
-            globs.push(raw);
+            globs.push(expandTilde(raw));
           } else {
             basesRaw.push(raw);
           }
@@ -131,7 +159,7 @@ export default function (pi: ExtensionAPI) {
     const bases: string[] = [];
     for (const b of basesRaw) {
       try {
-        const expanded = b.startsWith("~") ? path.join(process.env.HOME || "", b.slice(1)) : b;
+        const expanded = expandTilde(b);
         const abs = path.isAbsolute(expanded) ? expanded : path.resolve(cwd, expanded);
         const real = fs.realpathSync(abs).replace(/[\\/]+$/, "");
         bases.push(real);

@@ -2,9 +2,7 @@
   "paths": [
     "~/projects",
     "~/Documents",
-    "/tmp"
-  ],
-  "globs": [
+    "/tmp",
     "**/*.py",
     "**/*.ts",
     "**/*.js",

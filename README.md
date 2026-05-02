@@ -11,7 +11,7 @@ Included extensions
 **Consolidated permissions extension with secure-by-default file access control.**
 
 - **Secure-by-default**: No file access is allowed unless explicitly permitted.
-- **Dual permission model**: Combines allowed base paths AND allowed glob patterns.
+- **Single "paths" array**: The permissions file uses a single "paths" array that may contain both base filesystem paths and glob patterns. The loader classifies each entry (wildcard-containing entries are treated as globs).
 - **JSON configuration**: Clean, structured configuration file (also supports plain text format).
 - **Default location**: `~/.pi/agent/permissions.json`
 
@@ -23,9 +23,7 @@ Included extensions
   "paths": [
     "~/projects/myproject",
     "~/Documents/work",
-    "/tmp"
-  ],
-  "globs": [
+    "/tmp",
     "**/*.py",
     "**/*.ts",
     "**/*.js",
@@ -39,10 +37,13 @@ Included extensions
 **Plain text format** (also supported):
 ```
 # Comments start with #
+# Each non-empty line is classified as either a base path or a glob pattern.
+# Use the "path:" prefix to force a base-path entry if needed.
 path: ~/projects/myproject
-glob: **/*.py
-glob: **/*.md
-**/*.ts
+# Wildcard-containing entries are treated as globs:
+**/*.py
+**/*.md
+README.md
 ```
 
 **CLI flags**:
@@ -67,8 +68,7 @@ glob: **/*.md
 # Create ~/.pi/agent/permissions.json
 cat > ~/.pi/agent/permissions.json << 'JSON'
 {
-  "paths": ["~/projects"],
-  "globs": ["**/*.py", "**/*.md"]
+  "paths": ["~/projects", "**/*.py", "**/*.md"]
 }
 JSON
 
@@ -97,7 +97,7 @@ pi --permissions-file ./my-permissions.json
 **Allow only specific file types everywhere**:
 ```json
 {
-  "globs": [
+  "paths": [
     "**/*.py",
     "**/*.ts",
     "**/*.md",
@@ -112,9 +112,7 @@ pi --permissions-file ./my-permissions.json
 {
   "paths": [
     "~/projects/myapp",
-    "/tmp"
-  ],
-  "globs": [
+    "/tmp",
     "**/*.py",
     "**/*.ts",
     "**/*.json",
