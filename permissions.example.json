@@ -1,0 +1,24 @@
+{
+  "paths": [
+    "~/projects",
+    "~/Documents",
+    "/tmp"
+  ],
+  "globs": [
+    "**/*.py",
+    "**/*.ts",
+    "**/*.js",
+    "**/*.jsx",
+    "**/*.tsx",
+    "**/*.md",
+    "**/*.json",
+    "**/*.yaml",
+    "**/*.yml",
+    "**/*.txt",
+    "README.md",
+    "package.json",
+    "tsconfig.json",
+    "Makefile",
+    ".gitignore"
+  ]
+}
